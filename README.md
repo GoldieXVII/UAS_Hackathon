@@ -2,6 +2,7 @@
 
 
 Description:
+
 Using drones to take photos of crops, the photos will the be processed internally to assess crop condition and decide which areas of the farms are healthy, and which are not. This information can then be used to fertilize areas of the crops that deamed to be not healthy.
 
 

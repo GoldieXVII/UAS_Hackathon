@@ -20,11 +20,11 @@ What does this solve:
 
 Target user group:
 -Individuals and companies that farm crops
+-Companies that own and operate drones can use this an enter the market  
 
 
 Team Member Roles:
-
+https://docs.google.com/spreadsheets/d/1_qllsIitvRQ-BRGECbfG02l1fEXEncXkzrQS8FJcZHA/edit?usp=sharing
 
 Task Table:
-
-
+https://docs.google.com/spreadsheets/d/1a2IBMfG5kDayvPNnJbjgweGIrdvghiTv5S1nABJnmJw/edit?usp=sharing

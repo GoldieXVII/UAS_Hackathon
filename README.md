@@ -19,7 +19,7 @@ Main Benifits:
 -Can give real time analysis on crop condition
 -Inexpensive and time effecient to run
 -Large market for it
--Reduces cost for the farmer as fertilizer only needs to be used in areas of need and not across the whole farm
+-Reduces cost for the farmer as fertilizer only needs to be used in areas of need and not across the whole field
 
 
 What does this solve:

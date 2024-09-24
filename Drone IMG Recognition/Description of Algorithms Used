@@ -1,0 +1,28 @@
+Phython algorithm to analyse software:
+
+
+Autoencoder Architecture:
+
+
+The autoencoder consists of an encoder that compresses the input image and a decoder that reconstructs it. If the crop is healthy, the reconstruction will be close to the original image. If the crop is unhealthy, the reconstruction will not be similar to the original
+
+
+
+Training:
+
+
+The model is trained solely on healthy crops, and learning to reconstruct these healthy images. When presented with an unhealthy crop, the reconstruction error (Mean Squared Error (MSE)) is expected to be higher, indicating an anomaly.
+
+
+
+Anomaly Detection:
+
+
+After training, you can use the detect_anomaly() function to predict whether a crop is healthy based on the reconstruction loss. If the loss is above a certain threshold, the crop is classified as unhealthy.
+
+
+
+Threshold Tuning:
+
+
+The threshold for detecting anomalies can be fine-tuned depending on how sensitive you want the model to be.

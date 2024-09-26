@@ -1,50 +1,49 @@
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
 import time
 import requests
 from datetime import datetime
 
-train_data_dir = '/dataset'
+# Define the path to the dataset
+train_data_dir = 'C://Users//brand//OneDrive//Documents//Drone IMG Recognition/datasetnew'
 
 # Preprocessing and augmenting the images
 def preprocess_image(image_path):
     image = tf.io.read_file(image_path)
-    image = tf.image.decode_jpeg(image, channels=3)
+    image = tf.image.decode_png(image, channels=3)
     image = tf.image.resize(image, [128, 128])
-    image = image / 255.0  # Rescale
+    image = image / 255.0  # Rescale pixel values to [0, 1]
     return image
 
-def augment_image(image):
-    image = tf.image.random_flip_left_right(image)
-    image = tf.image.random_flip_up_down(image)
-    image = tf.image.random_brightness(image, 0.1)
-    return image
-
-def load_dataset(data_dir):
-    dataset = tf.data.Dataset.list_files(os.path.join(data_dir, '*/*'))
-    dataset = dataset.map(lambda x: preprocess_image(x))
-    dataset = dataset.map(lambda x: augment_image(x))
-    dataset = dataset.repeat()  # Repeat dataset for more training data
-    dataset = dataset.batch(1)  # Use smaller batch size
+def load_simple_dataset(data_dir):
+    # Load images directly from the root directory, assuming .png format
+    dataset = tf.data.Dataset.list_files(os.path.join(data_dir, '*.png'))
+    dataset = dataset.map(lambda x: preprocess_image(x))  # Preprocess images (resize, rescale)
+    dataset = dataset.batch(1)  # Batch size of 1 since there are few images
     return dataset
 
-train_dataset = load_dataset(train_data_dir)
+# Load dataset
+train_dataset = load_simple_dataset(train_data_dir)
 
-# Autoencoder model
+# Autoencoder model using tf.keras.Model
 class Autoencoder(tf.keras.Model):
     def __init__(self):
         super(Autoencoder, self).__init__()
+        # Encoder: downsampling
         self.encoder = tf.keras.Sequential([
-            tf.keras.layers.InputLayer(input_shape=(128, 128, 3)),
+            tf.keras.layers.InputLayer(shape=(128, 128, 3)),
             tf.keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
             tf.keras.layers.MaxPooling2D((2, 2), padding='same'),
             tf.keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
             tf.keras.layers.MaxPooling2D((2, 2), padding='same')
         ])
         
+        # Decoder: upsampling
         self.decoder = tf.keras.Sequential([
             tf.keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
             tf.keras.layers.UpSampling2D((2, 2)),
@@ -58,39 +57,36 @@ class Autoencoder(tf.keras.Model):
         decoded = self.decoder(encoded)
         return decoded
 
+# Instantiate the autoencoder model
 autoencoder = Autoencoder()
 
-# Compile the autoencoder model
-autoencoder.compile(optimizer=tf.keras.optimizers.Adam(), loss='mse')
+# Compile the model
+autoencoder.compile(optimizer='adam', loss='mse')
 
-# Add early stopping callback
-early_stopping = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)
-
-# Training autoencoder using model.fit
-autoencoder.fit(train_dataset, epochs=100, callbacks=[early_stopping], steps_per_epoch=5)
-
-# Computes reconstruction loss
+# Train the model
+autoencoder.fit(train_dataset, epochs=40, steps_per_epoch=5)
+# Anomaly detection function based on reconstruction error
 def detect_anomaly(image_path):
     img = cv2.imread(image_path)
     img = cv2.resize(img, (128, 128))
-    img = np.expand_dims(img, axis=0)  # Batch dimension
-    img = img / 255.0  # Rescale
+    img = np.expand_dims(img, axis=0)  # Add batch dimension
+    img = img / 255.0  # Rescale pixel values to [0, 1]
 
-    # Reconstructing image using autoencoder
-    reconstructed = autoencoder(tf.convert_to_tensor(img, dtype=tf.float32))
+    # Reconstruct the image using the autoencoder
+    reconstructed = autoencoder.predict(tf.convert_to_tensor(img, dtype=tf.float32))
     
-    # MSE between original and reconstructed
-    mse = np.mean(np.square(img - reconstructed.numpy()))
+    # Calculate MSE between original and reconstructed image
+    mse = np.mean(np.square(img - reconstructed))
 
-    # Threshold for anomaly detection
+    # Threshold for anomaly detection (tune this value based on your results)
     threshold = 0.02
     
     if mse > threshold:
         return "Unhealthy crops in picture"
     else:
         return "Healthy crops in picture"
-    
-# URL to fetch the image
+
+# URL to fetch the image from a live stream or camera feed
 url = "http://192.168.11.1:8080/snapshot?topic=/main_camera/image_raw"
 
 # Function to fetch and save the image
@@ -98,6 +94,7 @@ def fetch_image():
     try:
         response = requests.get(url, stream=True)
         if response.status_code == 200:
+            # Generate a unique filename based on the current timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"snapshot_{timestamp}.jpg"
             with open(filename, "wb") as file:
@@ -108,8 +105,9 @@ def fetch_image():
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
 
-# Fetch image every 10 seconds and detect anomalies
-while True:
+# Fetch image every 10 seconds and check for anomalies
+for i in range (0,5):
+    time.sleep(7)
     fetch_image()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"snapshot_{timestamp}.jpg"
@@ -117,5 +115,3 @@ while True:
     # Detect anomalies in fetched image
     result = detect_anomaly(filename)
     print(result)
-    
-    time.sleep(10)

@@ -1,5 +1,3 @@
-![Logo]([https://github.com/GoldieXVII/UAS_Hackathon/blob/main/image.jpg?raw=true](https://github.com/user-attachments/assets/85670e99-ad10-48e9-8093-bc3942334880))
-
 # UAS_Hackathon
 
 

@@ -1,0 +1,15 @@
+Hardware:
+Laptop that is multicore, 8GB+ of RAM, 10GB+ of storage
+Drone that has a raspberry pi with a built-in wifi module
+
+
+Software:
+Python: version 3 and above
+Clover v0.24 Raspbery Pi image
+Balena Etcher
+
+Python libraries:
+Tensorflow: v2.16.1 and above
+Numpy: v1.26.4
+OpenCV - Python: v4.10.0.84
+Plotly: v5.22.0

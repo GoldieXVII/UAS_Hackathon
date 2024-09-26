@@ -10,7 +10,7 @@ import requests
 from datetime import datetime
 
 # Define the path to the dataset
-train_data_dir = 'C://Users//brand//OneDrive//Documents//Drone IMG Recognition//datasetnew'
+train_data_dir = 'C://Users//brand//OneDrive//Documents//Drone IMG Recognition/datasetnew'
 
 # Preprocessing and augmenting the images
 def preprocess_image(image_path):
@@ -24,11 +24,12 @@ def load_simple_dataset(data_dir):
     # Load images directly from the root directory, assuming .png format
     dataset = tf.data.Dataset.list_files(os.path.join(data_dir, '*.png'))
     dataset = dataset.map(lambda x: preprocess_image(x))  # Preprocess images (resize, rescale)
-    dataset = dataset.batch(1)  # Batch size of 1 since there are few images
+    dataset = dataset.batch(32).prefetch(tf.data.experimental.AUTOTUNE)  # Batch size of 1 since there are few images
     return dataset
 
 # Load dataset
 train_dataset = load_simple_dataset(train_data_dir)
+print(list(train_dataset.as_numpy_iterator()))
 
 # Autoencoder model using tf.keras.Model
 class Autoencoder(tf.keras.Model):
@@ -64,7 +65,7 @@ autoencoder = Autoencoder()
 autoencoder.compile(optimizer='adam', loss='mse')
 
 # Train the model
-autoencoder.fit(train_dataset, epochs=40, steps_per_epoch=5)
+autoencoder.fit(train_dataset, epochs=40)
 # Anomaly detection function based on reconstruction error
 def detect_anomaly(image_path):
     img = cv2.imread(image_path)

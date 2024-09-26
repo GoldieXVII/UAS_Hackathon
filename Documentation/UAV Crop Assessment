@@ -1,0 +1,14 @@
+This project utilizes machine learning techniques for crop assessments while flying a UAV (Unmanned Ariel Vehicle) over crops or agriculture fields. The user will then be told whether the crops in question are healthy and thus require less time spent on them, or if they are unhealthy and if they require more time spent nurturing them with fertilizer.
+
+
+
+Features:
+
+- Real time feedback on whether the crops in the photo are healthy or not
+- Crops that have been pictured are stored locally on the users computer
+
+
+
+Objective:
+
+- To create a machine learning model, which utilises images of healthy crops. This model is then utilized to compare images taken by the drone, to determine whether the crops that are contained in the image are healthy or not, this is done by comparing the Mean Squared Error with a predetermined threshold.

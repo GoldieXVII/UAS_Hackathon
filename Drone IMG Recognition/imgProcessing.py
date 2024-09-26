@@ -84,8 +84,8 @@ def fetch_image():
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
         return None
-
-# Fetch image every 10 seconds and classify crop health
+time.sleep(30)
+# Fetch image every 7 seconds and classify crop health
 for i in range(5):
     time.sleep(7)  # Adjust the delay based on your requirements
     filename = fetch_image()

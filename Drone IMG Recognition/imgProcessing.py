@@ -10,7 +10,7 @@ import requests
 from datetime import datetime
 
 # Define the path to the dataset
-train_data_dir = 'C://Users//brand//OneDrive//Documents//Drone IMG Recognition/datasetnew'
+train_data_dir = 'C://Users//brand//OneDrive//Documents//Drone IMG Recognition//datasetnew'
 
 # Preprocessing and augmenting the images
 def preprocess_image(image_path):

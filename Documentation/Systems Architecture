@@ -1,0 +1,7 @@
+The system consists of a command line interface (CLI), which is used to run the python script, as well as print out the results of the script that gets run
+
+Architecture Overview:
+
+Key Components:
+  -Machine Learning Model: This model is used for comparing images caputured from the drone, and then comparing it to the to preset dataset of healthy crops
+  -Drone Camera: Images are taken from the drone camera at a set amount of intervals, as well as a set amount of times that it can take an image.

@@ -1,96 +1,72 @@
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-import tensorflow as tf
-import numpy as np
-import cv2
-import matplotlib.pyplot as plt
-import time
 import requests
+import time
 from datetime import datetime
-
-# Define the path to the dataset
-train_data_dir = 'C://Users//brand//OneDrive//Documents//Drone IMG Recognition/datasetnew'
-
-# Preprocessing and augmenting the images
-def preprocess_image(image_path):
-    image = tf.io.read_file(image_path)
-    image = tf.image.decode_png(image, channels=3)
-    image = tf.image.resize(image, [128, 128])
-    image = image / 255.0  # Rescale pixel values to [0, 1]
-    return image
-
-def load_simple_dataset(data_dir):
-    # Load images directly from the root directory, assuming .png format
-    dataset = tf.data.Dataset.list_files(os.path.join(data_dir, '*.png'))
-    dataset = dataset.map(lambda x: preprocess_image(x))  # Preprocess images (resize, rescale)
-    dataset = dataset.batch(32).prefetch(tf.data.experimental.AUTOTUNE)  # Batch size of 1 since there are few images
-    return dataset
-
-# Load dataset
-train_dataset = load_simple_dataset(train_data_dir)
-print(list(train_dataset.as_numpy_iterator()))
-
-# Autoencoder model using tf.keras.Model
-class Autoencoder(tf.keras.Model):
-    def __init__(self):
-        super(Autoencoder, self).__init__()
-        # Encoder: downsampling
-        self.encoder = tf.keras.Sequential([
-            tf.keras.layers.InputLayer(shape=(128, 128, 3)),
-            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
-            tf.keras.layers.MaxPooling2D((2, 2), padding='same'),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
-            tf.keras.layers.MaxPooling2D((2, 2), padding='same')
-        ])
-        
-        # Decoder: upsampling
-        self.decoder = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
-            tf.keras.layers.UpSampling2D((2, 2)),
-            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
-            tf.keras.layers.UpSampling2D((2, 2)),
-            tf.keras.layers.Conv2D(3, (3, 3), activation='sigmoid', padding='same')
-        ])
-
-    def call(self, x):
-        encoded = self.encoder(x)
-        decoded = self.decoder(encoded)
-        return decoded
-
-# Instantiate the autoencoder model
-autoencoder = Autoencoder()
-
-# Compile the model
-autoencoder.compile(optimizer='adam', loss='mse')
-
-# Train the model
-autoencoder.fit(train_dataset, epochs=40)
-# Anomaly detection function based on reconstruction error
-def detect_anomaly(image_path):
-    img = cv2.imread(image_path)
-    img = cv2.resize(img, (128, 128))
-    img = np.expand_dims(img, axis=0)  # Add batch dimension
-    img = img / 255.0  # Rescale pixel values to [0, 1]
-
-    # Reconstruct the image using the autoencoder
-    reconstructed = autoencoder.predict(tf.convert_to_tensor(img, dtype=tf.float32))
-    
-    # Calculate MSE between original and reconstructed image
-    mse = np.mean(np.square(img - reconstructed))
-
-    # Threshold for anomaly detection (tune this value based on your results)
-    threshold = 0.02
-    
-    if mse > threshold:
-        return "Unhealthy crops in picture"
-    else:
-        return "Healthy crops in picture"
+import numpy as np
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
+from sklearn.metrics.pairwise import cosine_similarity
 
 # URL to fetch the image from a live stream or camera feed
 url = "http://192.168.11.1:8080/snapshot?topic=/main_camera/image_raw"
 
-# Function to fetch and save the image
+# Load pre-trained VGG16 model + higher level layers
+model = VGG16(weights='imagenet', include_top=False)
+
+# Path to your 5 reference images
+reference_images_dir = "C://Users//brand//OneDrive//Documents//Drone IMG Recognition/datasetnew"
+
+# Define similarity threshold for healthy crops
+SIMILARITY_THRESHOLD = 0.85  # Adjust this based on experimentation
+
+# Function to preprocess and extract features from images
+def extract_features(img_path, model):
+    img = image.load_img(img_path, target_size=(224, 224))  # VGG16 expects 224x224
+    img_data = image.img_to_array(img)
+    img_data = np.expand_dims(img_data, axis=0)
+    img_data = preprocess_input(img_data)
+
+    # Get features from the VGG16 model
+    features = model.predict(img_data)
+    return features.flatten()
+
+# Extract features for all reference images
+reference_features = []
+reference_images = []
+
+for img_name in os.listdir(reference_images_dir):
+    img_path = os.path.join(reference_images_dir, img_name)
+    features = extract_features(img_path, model)
+    reference_features.append(features)
+    reference_images.append(img_name)
+
+# Function to compare an incoming image to reference images
+def compare_image(incoming_image_path):
+    incoming_features = extract_features(incoming_image_path, model)
+
+    similarities = []
+    for ref_features in reference_features:
+        similarity = cosine_similarity([incoming_features], [ref_features])[0][0]
+        similarities.append(similarity)
+
+    # Get the most similar reference image
+    most_similar_idx = np.argmax(similarities)
+    most_similar_image = reference_images[most_similar_idx]
+    highest_similarity = similarities[most_similar_idx]
+
+    print(f"Most similar image: {most_similar_image} with similarity: {highest_similarity}")
+    return highest_similarity
+
+# Function to determine crop health based on similarity score
+def classify_crop(similarity_score):
+    if similarity_score >= SIMILARITY_THRESHOLD:
+        return "Healthy Crop"
+    else:
+        return "Unhealthy Crop"
+
+# Function to fetch and save the image from live stream
 def fetch_image():
     try:
         response = requests.get(url, stream=True)
@@ -101,18 +77,24 @@ def fetch_image():
             with open(filename, "wb") as file:
                 file.write(response.content)
             print(f"Image fetched and saved as {filename}.")
+            return filename
         else:
             print(f"Failed to fetch image. Status code: {response.status_code}")
+            return None
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
+        return None
 
-# Fetch image every 10 seconds and check for anomalies
-for i in range (0,5):
-    time.sleep(7)
-    fetch_image()
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"snapshot_{timestamp}.jpg"
+# Fetch image every 10 seconds and classify crop health
+for i in range(5):
+    time.sleep(7)  # Adjust the delay based on your requirements
+    filename = fetch_image()
+    # filename = 'snapshot_20240926_160248.jpg'
     
-    # Detect anomalies in fetched image
-    result = detect_anomaly(filename)
-    print(result)
+    if filename:
+        # Compare the fetched image to reference images
+        similarity_score = compare_image(filename)
+        
+        # Classify crop health based on similarity score
+        crop_health = classify_crop(similarity_score)
+        print(f"Crop health classification: {crop_health}")

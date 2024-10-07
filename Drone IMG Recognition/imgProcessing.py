@@ -15,7 +15,6 @@ url = "http://192.168.11.1:8080/snapshot?topic=/main_camera/image_raw"
 # Load pre-trained VGG16 model + higher level layers
 model = VGG16(weights='imagenet', include_top=False)
 
-# Path to your 5 reference images
 reference_images_dir = "C://Users//brand//OneDrive//Documents//Drone IMG Recognition/datasetnew"
 
 # Define similarity threshold for healthy crops
